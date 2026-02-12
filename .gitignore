@@ -1,1 +1,4 @@
-.venv/
+﻿.venv/
+_project_hold/
+ML_Final_proj/
+__pycache__/
