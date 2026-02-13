@@ -37,6 +37,12 @@ def parse_args():
     parser.add_argument("--tune", action="store_true")
     parser.add_argument("--n-iter", type=int, default=20)
     parser.add_argument("--optimize-threshold", action="store_true")
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default="",
+        help="Optional experiment name. When set, saves models/results under run-specific paths.",
+    )
     return parser.parse_args()
 
 
@@ -56,6 +62,12 @@ def choose_threshold(y_true, y_score):
 def main():
     args = parse_args()
     set_seed(RANDOM_SEED)
+    run_suffix = f"__{args.run_name}" if args.run_name else ""
+    results_base = (
+        RESULTS_DIR / "classification" / args.run_name
+        if args.run_name
+        else RESULTS_DIR / "classification"
+    )
 
     df = load_csv(RAW_DATA_PATH)
     df = prepare_dataframe(df, feature_engineering=args.feature_engineering)
@@ -84,7 +96,10 @@ def main():
     baseline_metrics = classification_metrics(y_val, val_pred, val_score)
 
     ensure_dir(MODEL_DIR)
-    joblib.dump(baseline, MODEL_DIR / "classification_baseline.joblib")
+    joblib.dump(
+        baseline,
+        MODEL_DIR / f"classification_baseline{run_suffix}.joblib",
+    )
 
     improved = build_classification_improved(preprocessor)
     best_params = {}
@@ -118,7 +133,10 @@ def main():
     improved_metrics = classification_metrics(
         y_val, improved_val_pred, improved_val_score
     )
-    joblib.dump(improved, MODEL_DIR / "classification_improved.joblib")
+    joblib.dump(
+        improved,
+        MODEL_DIR / f"classification_improved{run_suffix}.joblib",
+    )
 
     results = {
         "baseline_val": baseline_metrics,
@@ -130,7 +148,7 @@ def main():
         "feature_engineering": args.feature_engineering,
         "tuned": args.tune,
     }
-    save_json(results, RESULTS_DIR / "classification" / "training_summary.json")
+    save_json(results, results_base / "training_summary.json")
 
 
 if __name__ == "__main__":

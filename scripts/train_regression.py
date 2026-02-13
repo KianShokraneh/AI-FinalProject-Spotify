@@ -36,12 +36,24 @@ def parse_args():
     parser.add_argument("--feature-engineering", action="store_true")
     parser.add_argument("--tune", action="store_true")
     parser.add_argument("--n-iter", type=int, default=20)
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default="",
+        help="Optional experiment name. When set, saves models/results under run-specific paths.",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     set_seed(RANDOM_SEED)
+    run_suffix = f"__{args.run_name}" if args.run_name else ""
+    results_base = (
+        RESULTS_DIR / "regression" / args.run_name
+        if args.run_name
+        else RESULTS_DIR / "regression"
+    )
 
     df = load_csv(RAW_DATA_PATH)
     df = prepare_dataframe(df, feature_engineering=args.feature_engineering)
@@ -67,7 +79,10 @@ def main():
     baseline_metrics = regression_metrics(y_val, val_pred)
 
     ensure_dir(MODEL_DIR)
-    joblib.dump(baseline, MODEL_DIR / "regression_baseline.joblib")
+    joblib.dump(
+        baseline,
+        MODEL_DIR / f"regression_baseline{run_suffix}.joblib",
+    )
 
     improved = build_regression_improved(preprocessor)
     best_params = {}
@@ -92,7 +107,10 @@ def main():
 
     improved_val_pred = improved.predict(x_val)
     improved_metrics = regression_metrics(y_val, improved_val_pred)
-    joblib.dump(improved, MODEL_DIR / "regression_improved.joblib")
+    joblib.dump(
+        improved,
+        MODEL_DIR / f"regression_improved{run_suffix}.joblib",
+    )
 
     results = {
         "baseline_val": baseline_metrics,
@@ -101,7 +119,7 @@ def main():
         "feature_engineering": args.feature_engineering,
         "tuned": args.tune,
     }
-    save_json(results, RESULTS_DIR / "regression" / "training_summary.json")
+    save_json(results, results_base / "training_summary.json")
 
 
 if __name__ == "__main__":

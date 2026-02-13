@@ -28,6 +28,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--feature-engineering", action="store_true")
     parser.add_argument("--model", choices=["baseline", "improved", "both"], default="both")
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default="",
+        help="Optional experiment name. When set, loads run-specific models and writes run-specific results.",
+    )
     return parser.parse_args()
 
 
@@ -48,6 +54,12 @@ def evaluate_model(model_path: Path, x_test, y_test, df_test, output_dir: Path):
 
 def main():
     args = parse_args()
+    run_suffix = f"__{args.run_name}" if args.run_name else ""
+    results_base = (
+        RESULTS_DIR / "regression" / args.run_name
+        if args.run_name
+        else RESULTS_DIR / "regression"
+    )
     df = load_csv(RAW_DATA_PATH)
     df = prepare_dataframe(df, feature_engineering=args.feature_engineering)
     numeric_cols, categorical_cols = get_feature_columns(
@@ -68,22 +80,22 @@ def main():
     results = {}
     if args.model in {"baseline", "both"}:
         results["baseline"] = evaluate_model(
-            Path("models/regression_baseline.joblib"),
+            Path("models") / f"regression_baseline{run_suffix}.joblib",
             x_test,
             y_test,
             df_test,
-            RESULTS_DIR / "regression" / "baseline",
+            results_base / "baseline",
         )
     if args.model in {"improved", "both"}:
         results["improved"] = evaluate_model(
-            Path("models/regression_improved.joblib"),
+            Path("models") / f"regression_improved{run_suffix}.joblib",
             x_test,
             y_test,
             df_test,
-            RESULTS_DIR / "regression" / "improved",
+            results_base / "improved",
         )
 
-    save_json(results, RESULTS_DIR / "regression" / "metrics.json")
+    save_json(results, results_base / "metrics.json")
 
 
 if __name__ == "__main__":
