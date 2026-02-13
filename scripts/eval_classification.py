@@ -17,7 +17,11 @@ from spotify_ml.config import (  # noqa: E402
     RANDOM_SEED,
 )
 from spotify_ml.evaluation.error_analysis import classification_error_analysis  # noqa: E402
-from spotify_ml.evaluation.metrics import classification_metrics  # noqa: E402
+from spotify_ml.evaluation.metrics import (  # noqa: E402
+    classification_confusion,
+    classification_metrics,
+)
+from spotify_ml.evaluation.plots import plot_confusion_matrix, plot_roc_curve  # noqa: E402
 from spotify_ml.preprocessing.dataset import (  # noqa: E402
     get_feature_columns,
     prepare_dataframe,
@@ -67,6 +71,9 @@ def evaluate_model(model_path: Path, x_test, y_test, df_test, output_dir: Path, 
     y_score = model.predict_proba(x_test)[:, 1]
     y_pred = (y_score >= threshold).astype(int)
     metrics = classification_metrics(y_test, y_pred, y_score)
+    conf = classification_confusion(y_test, y_pred)
+    plot_confusion_matrix(conf, output_dir / "figures" / "confusion_matrix.png")
+    plot_roc_curve(y_test, y_score, output_dir / "figures" / "roc_curve.png")
     classification_error_analysis(
         df_test,
         y_test,

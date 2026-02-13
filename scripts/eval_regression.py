@@ -15,6 +15,7 @@ from spotify_ml.config import (  # noqa: E402
 )
 from spotify_ml.evaluation.error_analysis import regression_error_analysis  # noqa: E402
 from spotify_ml.evaluation.metrics import regression_metrics  # noqa: E402
+from spotify_ml.evaluation.plots import plot_regression_diagnostics  # noqa: E402
 from spotify_ml.preprocessing.dataset import (  # noqa: E402
     get_feature_columns,
     prepare_dataframe,
@@ -34,6 +35,7 @@ def evaluate_model(model_path: Path, x_test, y_test, df_test, output_dir: Path):
     model = joblib.load(model_path)
     y_pred = model.predict(x_test)
     metrics = regression_metrics(y_test, y_pred)
+    plot_regression_diagnostics(y_test, y_pred, output_dir / "figures")
     regression_error_analysis(
         df_test,
         y_test,
