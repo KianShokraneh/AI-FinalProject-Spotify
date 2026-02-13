@@ -35,9 +35,15 @@ def parse_args():
     parser.add_argument("--feature-engineering", action="store_true")
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument(
+        "--run-name",
+        type=str,
+        default="",
+        help="Optional experiment name. When set, loads run-specific models and writes run-specific results.",
+    )
+    parser.add_argument(
         "--training-summary",
         type=str,
-        default=str(RESULTS_DIR / "classification" / "training_summary.json"),
+        default=None,
         help="Path to classification training summary JSON (contains optimized threshold).",
     )
     parser.add_argument(
@@ -89,6 +95,12 @@ def evaluate_model(model_path: Path, x_test, y_test, df_test, output_dir: Path, 
 
 def main():
     args = parse_args()
+    run_suffix = f"__{args.run_name}" if args.run_name else ""
+    results_base = (
+        RESULTS_DIR / "classification" / args.run_name
+        if args.run_name
+        else RESULTS_DIR / "classification"
+    )
     df = load_csv(RAW_DATA_PATH)
     df = prepare_dataframe(df, feature_engineering=args.feature_engineering)
 
@@ -107,31 +119,34 @@ def main():
     )
     df_test = df.loc[x_test.index]
 
-    training_summary_path = Path(args.training_summary)
+    default_training_summary = results_base / "training_summary.json"
+    training_summary_path = (
+        Path(args.training_summary) if args.training_summary else default_training_summary
+    )
     trained_threshold = None if args.force_threshold else _load_trained_threshold(training_summary_path)
 
     results = {}
     if args.model in {"baseline", "both"}:
         results["baseline"] = evaluate_model(
-            Path("models/classification_baseline.joblib"),
+            Path("models") / f"classification_baseline{run_suffix}.joblib",
             x_test,
             y_test,
             df_test,
-            RESULTS_DIR / "classification" / "baseline",
+            results_base / "baseline",
             args.threshold,
         )
     if args.model in {"improved", "both"}:
         improved_threshold = args.threshold if trained_threshold is None else trained_threshold
         results["improved"] = evaluate_model(
-            Path("models/classification_improved.joblib"),
+            Path("models") / f"classification_improved{run_suffix}.joblib",
             x_test,
             y_test,
             df_test,
-            RESULTS_DIR / "classification" / "improved",
+            results_base / "improved",
             improved_threshold,
         )
 
-    save_json(results, RESULTS_DIR / "classification" / "metrics.json")
+    save_json(results, results_base / "metrics.json")
 
 
 if __name__ == "__main__":
